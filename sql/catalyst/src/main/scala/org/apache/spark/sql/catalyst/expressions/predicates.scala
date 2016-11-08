@@ -46,7 +46,20 @@ trait Predicate extends Expression {
 
 trait PredicateHelper {
   protected def splitConjunctivePredicates(condition: Expression): Seq[Expression] = {
+    /*
+    a or b and c ==> (a or b) and (a or c)
+    */
     condition match {
+      case c @ Or(cond1, cond2) =>
+        val left = splitConjunctivePredicates(cond1)
+        val right = splitConjunctivePredicates(cond2)
+        if (left.size == 1 && right.size == 1) {
+          c :: Nil
+        } else {
+          var ret:List[Expression] = Nil
+          left.foreach((le: Expression) => right.foreach((re: Expression) => ret = ret :+ new Or(le, re)))
+          ret
+        }
       case And(cond1, cond2) =>
         splitConjunctivePredicates(cond1) ++ splitConjunctivePredicates(cond2)
       case other => other :: Nil
